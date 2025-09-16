@@ -629,6 +629,8 @@ const ExplorePage = () => {
 
 // Main App Component
 function App() {
+  const { user } = useAuth();
+  
   return (
     <AuthProvider>
       <BrowserRouter>
