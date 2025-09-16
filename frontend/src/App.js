@@ -208,7 +208,7 @@ const LandingPage = () => {
               <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent"> Fans</span>
             </h1>
             <p className="text-xl md:text-2xl text-slate-600 mb-12 max-w-3xl mx-auto leading-relaxed">
-              La plataforma definitiva para creadores de contenido. Monetiza tu pasión con comisiones ultra bajas, 
+              La plataforma definitiva para creadores de contenido. Monetiza tu pasión con comisiones competitivas, 
               pagos rápidos y herramientas avanzadas de analítica.
             </p>
             
