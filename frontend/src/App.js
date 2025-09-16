@@ -243,22 +243,22 @@ const LandingPage = () => {
               {user ? (
                 <>
                   <Button size="lg" className="text-lg px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700" onClick={() => window.location.href = '/explore'}>
-                    Explorar Creadores
+                    🎯 Descubrir Creadores
                   </Button>
                   {user.is_creator && (
                     <Button variant="outline" size="lg" className="text-lg px-8 py-4" onClick={() => window.location.href = '/dashboard'}>
-                      Mi Dashboard
+                      📊 Mi Dashboard
                     </Button>
                   )}
                   <Button variant="outline" size="lg" className="text-lg px-8 py-4" onClick={() => window.location.href = '/messages'}>
-                    Mis Mensajes
+                    💬 Mis Conversaciones
                   </Button>
                 </>
               ) : (
                 <>
                   <AuthModal mode="register" />
                   <Button variant="outline" size="lg" className="text-lg px-8 py-4">
-                    Ver Demo
+                    🎬 Ver Demo en Vivo
                   </Button>
                 </>
               )}
