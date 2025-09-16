@@ -622,19 +622,19 @@ const ExplorePage = () => {
         {/* Category Stats */}
         <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="text-center p-3 bg-white rounded-lg border">
-            <div className="text-2xl font-bold text-indigo-600">{creators.length}</div>
+            <div className="text-2xl font-bold text-orange-600">{creators.length}</div>
             <div className="text-sm text-slate-600">Creadores Activos</div>
           </div>
           <div className="text-center p-3 bg-white rounded-lg border">
-            <div className="text-2xl font-bold text-green-600">50+</div>
+            <div className="text-2xl font-bold text-red-600">50+</div>
             <div className="text-sm text-slate-600">Categorías</div>
           </div>
           <div className="text-center p-3 bg-white rounded-lg border">
-            <div className="text-2xl font-bold text-purple-600">1000+</div>
+            <div className="text-2xl font-bold text-yellow-600">1000+</div>
             <div className="text-sm text-slate-600">Contenidos</div>
           </div>
           <div className="text-center p-3 bg-white rounded-lg border">
-            <div className="text-2xl font-bold text-yellow-600">9.9%</div>
+            <div className="text-2xl font-bold text-orange-500">9.9%</div>
             <div className="text-sm text-slate-600">Comisión</div>
           </div>
         </div>
