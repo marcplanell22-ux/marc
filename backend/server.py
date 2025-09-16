@@ -371,22 +371,21 @@ async def get_content_file(content_id: str, current_user: User = Depends(get_cur
 # Payment Routes
 @api_router.post("/payments/subscribe")
 async def create_subscription_checkout(
-    creator_id: str,
-    plan_type: str,
+    subscription_data: SubscriptionRequest,
     request: Request,
     current_user: User = Depends(get_current_user)
 ):
-    if plan_type not in SUBSCRIPTION_PACKAGES:
+    if subscription_data.plan_type not in SUBSCRIPTION_PACKAGES:
         raise HTTPException(status_code=400, detail="Invalid subscription plan")
     
-    creator = await db.creators.find_one({"id": creator_id})
+    creator = await db.creators.find_one({"id": subscription_data.creator_id})
     if not creator:
         raise HTTPException(status_code=404, detail="Creator not found")
     
     # Check if already subscribed
     existing_subscription = await db.subscriptions.find_one({
         "user_id": current_user.id,
-        "creator_id": creator_id,
+        "creator_id": subscription_data.creator_id,
         "status": "active"
     })
     if existing_subscription:
@@ -397,9 +396,9 @@ async def create_subscription_checkout(
     webhook_url = f"{host_url}/api/webhook/stripe"
     stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
     
-    package = SUBSCRIPTION_PACKAGES[plan_type]
+    package = SUBSCRIPTION_PACKAGES[subscription_data.plan_type]
     success_url = f"{host_url}/subscription-success?session_id={{CHECKOUT_SESSION_ID}}"
-    cancel_url = f"{host_url}/creators/{creator_id}"
+    cancel_url = f"{host_url}/creators/{subscription_data.creator_id}"
     
     checkout_request = CheckoutSessionRequest(
         amount=package["price"],
@@ -409,8 +408,8 @@ async def create_subscription_checkout(
         metadata={
             "type": "subscription",
             "user_id": current_user.id,
-            "creator_id": creator_id,
-            "plan_type": plan_type
+            "creator_id": subscription_data.creator_id,
+            "plan_type": subscription_data.plan_type
         }
     )
     
@@ -419,13 +418,13 @@ async def create_subscription_checkout(
     # Store payment transaction
     transaction = PaymentTransaction(
         user_id=current_user.id,
-        creator_id=creator_id,
+        creator_id=subscription_data.creator_id,
         amount=package["price"],
         transaction_type="subscription",
         stripe_session_id=session.session_id,
         metadata={
-            "plan_type": plan_type,
-            "creator_id": creator_id
+            "plan_type": subscription_data.plan_type,
+            "creator_id": subscription_data.creator_id
         }
     )
     await db.payment_transactions.insert_one(transaction.dict())
