@@ -8,6 +8,7 @@ import { Label } from './components/ui/label';
 import { Textarea } from './components/ui/textarea';
 import { Switch } from './components/ui/switch';
 import { toast } from './hooks/use-toast';
+import ContentScheduler from './ContentScheduler';
 import { 
   DollarSign, 
   Users, 
@@ -17,7 +18,8 @@ import {
   Plus,
   BarChart3,
   Calendar,
-  Gift
+  Gift,
+  Clock
 } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
