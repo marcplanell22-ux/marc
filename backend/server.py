@@ -120,6 +120,59 @@ class ContentCreate(BaseModel):
     ppv_price: Optional[float] = None
     tags: List[str] = []
 
+class ScheduledContent(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    creator_id: str
+    title: str
+    description: str
+    content_type: str  # 'image', 'video', 'text', 'audio'
+    file_path: Optional[str] = None
+    thumbnail_url: Optional[str] = None
+    is_premium: bool = False
+    is_ppv: bool = False
+    ppv_price: Optional[float] = None
+    tags: List[str] = []
+    scheduled_date: datetime
+    is_recurring: bool = False
+    recurrence_type: Optional[str] = None  # 'weekly', 'monthly', 'daily'
+    recurrence_end_date: Optional[datetime] = None
+    status: str = "scheduled"  # 'scheduled', 'published', 'cancelled'
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    published_at: Optional[datetime] = None
+
+class ScheduledContentCreate(BaseModel):
+    title: str
+    description: str
+    scheduled_date: datetime
+    is_premium: bool = False
+    is_ppv: bool = False
+    ppv_price: Optional[float] = None
+    tags: List[str] = []
+    is_recurring: bool = False
+    recurrence_type: Optional[str] = None
+    recurrence_end_date: Optional[datetime] = None
+
+class ContentTemplate(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    creator_id: str
+    name: str
+    title_template: str
+    description_template: str
+    tags: List[str] = []
+    is_premium: bool = False
+    is_ppv: bool = False
+    ppv_price: Optional[float] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ContentTemplateCreate(BaseModel):
+    name: str
+    title_template: str
+    description_template: str
+    tags: List[str] = []
+    is_premium: bool = False
+    is_ppv: bool = False
+    ppv_price: Optional[float] = None
+
 class Subscription(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     user_id: str
