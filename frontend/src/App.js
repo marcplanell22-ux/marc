@@ -635,7 +635,11 @@ function App() {
         <div className="min-h-screen bg-slate-50">
           <Header />
           <main>
-            <AppRoutes />
+            <Routes>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/explore" element={<ExplorePage />} />
+              <Route path="/dashboard" element={<Dashboard user={user} />} />
+            </Routes>
           </main>
           <Toaster />
         </div>
