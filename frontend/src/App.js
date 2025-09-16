@@ -717,7 +717,7 @@ const ExplorePage = () => {
 
               <CardContent className="pt-8 p-6">
                 <div className="mb-4" onClick={() => window.location.href = `/creator/${creator.user_info?.username || creator.id}`}>
-                  <h3 className="font-bold text-lg text-slate-900 mb-1 group-hover:text-indigo-600 transition-colors">{creator.display_name}</h3>
+                  <h3 className="font-bold text-lg text-slate-900 mb-1 group-hover:text-orange-600 transition-colors">{creator.display_name}</h3>
                   <p className="text-slate-600 text-sm line-clamp-2">{creator.bio}</p>
                 </div>
 
