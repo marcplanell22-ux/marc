@@ -328,6 +328,66 @@ class TipRequest(BaseModel):
     amount: float
     message: Optional[str] = None
 
+# Stripe Connect & Payouts Models
+class StripeConnectAccount(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    creator_id: str
+    stripe_account_id: str
+    onboarding_completed: bool = False
+    kyc_verified: bool = False
+    payouts_enabled: bool = False
+    requirements_due: List[str] = []
+    supported_countries: List[str] = []
+    default_currency: str = "usd"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class CreatorLedger(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    creator_id: str
+    transaction_type: str  # 'subscription', 'tip', 'ppv', 'refund', 'chargeback'
+    gross_amount: float
+    platform_fee: float
+    tax_amount: float = 0.0
+    net_amount: float
+    currency: str = "usd"
+    payment_intent_id: Optional[str] = None
+    stripe_session_id: Optional[str] = None
+    status: str = "pending"  # 'pending', 'available', 'paid', 'refunded', 'disputed'
+    available_at: datetime  # When funds become available for payout
+    description: str
+    metadata: Optional[Dict[str, Any]] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class CreatorPayout(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    creator_id: str
+    stripe_account_id: str
+    amount: float
+    currency: str = "usd"
+    stripe_transfer_id: Optional[str] = None
+    status: str = "pending"  # 'pending', 'paid', 'failed', 'cancelled'
+    payout_type: str = "automatic"  # 'automatic', 'manual'
+    failure_reason: Optional[str] = None
+    ledger_entries: List[str] = []  # IDs of ledger entries included in this payout
+    scheduled_date: Optional[datetime] = None
+    executed_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class PayoutRequest(BaseModel):
+    amount: Optional[float] = None  # If None, payout all available balance
+
+class CreatorBalance(BaseModel):
+    creator_id: str
+    available_balance: float
+    pending_balance: float
+    total_earned: float
+    total_paid_out: float
+    currency: str = "usd"
+    next_payout_date: Optional[datetime] = None
+    minimum_payout: float = 50.0
+
 class SubscriptionRequest(BaseModel):
     creator_id: str
     plan_type: str
