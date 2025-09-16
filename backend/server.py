@@ -43,6 +43,9 @@ STRIPE_API_KEY = os.environ.get('STRIPE_API_KEY')
 # Encryption Configuration
 ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY', Fernet.generate_key().decode())
 
+# API Configuration
+API = os.environ.get('API_BASE_URL', 'http://localhost:8000/api')
+
 # WebSocket Connection Manager
 class ConnectionManager:
     def __init__(self):
