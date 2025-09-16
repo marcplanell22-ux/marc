@@ -16,12 +16,14 @@ import jwt
 from bson import ObjectId
 import json
 from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionResponse, CheckoutStatusResponse, CheckoutSessionRequest
+from emergentintegrations.payments.stripe.connect import StripeConnect, ConnectAccountResponse, ConnectOnboardingResponse
 import io
 import gridfs
 import asyncio
 from cryptography.fernet import Fernet
 import base64
 import hashlib
+from decimal import Decimal, ROUND_HALF_UP
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
