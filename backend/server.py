@@ -1102,6 +1102,458 @@ async def stripe_webhook(request: Request):
         logging.error(f"Webhook error: {str(e)}")
         raise HTTPException(status_code=400, detail="Webhook processing failed")
 
+# Messaging Routes
+@api_router.get("/conversations", response_model=List[Dict])
+async def get_conversations(current_user: User = Depends(get_current_user)):
+    """Get all conversations for the current user"""
+    conversations = await db.conversations.find({
+        "$or": [
+            {"creator_id": current_user.id},
+            {"fan_id": current_user.id}
+        ]
+    }).sort("last_message_at", -1).to_list(length=None)
+    
+    # Enrich conversations with participant info and last message
+    enriched_conversations = []
+    for conv in conversations:
+        # Get other participant info
+        other_user_id = conv['fan_id'] if conv['creator_id'] == current_user.id else conv['creator_id']
+        other_user = await db.users.find_one({"id": other_user_id})
+        
+        # Get creator info if needed
+        creator_info = None
+        if conv['creator_id'] != current_user.id:
+            creator_info = await db.creators.find_one({"user_id": conv['creator_id']})
+        
+        # Get last message
+        last_message = await db.messages.find_one(
+            {"conversation_id": conv['id']},
+            sort=[("created_at", -1)]
+        )
+        
+        # Count unread messages
+        unread_count = await db.messages.count_documents({
+            "conversation_id": conv['id'],
+            "sender_id": {"$ne": current_user.id},
+            "is_read": False
+        })
+        
+        enriched_conversations.append({
+            **conv,
+            "other_user": {
+                "id": other_user['id'],
+                "username": other_user['username'],
+                "full_name": other_user['full_name'],
+                "avatar_url": other_user.get('avatar_url'),
+                "is_creator": other_user['is_creator']
+            },
+            "creator_info": creator_info,
+            "last_message": last_message,
+            "unread_count": unread_count
+        })
+    
+    return enriched_conversations
+
+@api_router.post("/conversations")
+async def create_conversation(
+    recipient_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Create or get existing conversation with another user"""
+    if recipient_id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot create conversation with yourself")
+    
+    # Check if recipient exists
+    recipient = await db.users.find_one({"id": recipient_id})
+    if not recipient:
+        raise HTTPException(status_code=404, detail="Recipient not found")
+    
+    # Determine creator and fan roles
+    creator_id = recipient_id if recipient['is_creator'] else current_user.id
+    fan_id = current_user.id if recipient['is_creator'] else recipient_id
+    
+    # Check if conversation already exists
+    existing_conv = await db.conversations.find_one({
+        "creator_id": creator_id,
+        "fan_id": fan_id
+    })
+    
+    if existing_conv:
+        return {"conversation_id": existing_conv['id'], "exists": True}
+    
+    # Check if can send message
+    can_send, reason = await can_send_message(current_user.id, recipient_id)
+    if not can_send:
+        raise HTTPException(status_code=403, detail=reason)
+    
+    # Create new conversation
+    conversation = Conversation(
+        creator_id=creator_id,
+        fan_id=fan_id
+    )
+    
+    await db.conversations.insert_one(conversation.dict())
+    
+    return {"conversation_id": conversation.id, "exists": False}
+
+@api_router.get("/conversations/{conversation_id}/messages")
+async def get_conversation_messages(
+    conversation_id: str,
+    skip: int = 0,
+    limit: int = 50,
+    current_user: User = Depends(get_current_user)
+):
+    """Get messages from a conversation"""
+    # Verify user is part of conversation
+    conversation = await db.conversations.find_one({"id": conversation_id})
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    
+    if current_user.id not in [conversation['creator_id'], conversation['fan_id']]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Get messages
+    messages = await db.messages.find(
+        {"conversation_id": conversation_id}
+    ).sort("created_at", -1).skip(skip).limit(limit).to_list(length=None)
+    
+    # Decrypt messages if encrypted
+    decrypted_messages = []
+    for msg in messages:
+        if msg.get('is_encrypted') and msg.get('encryption_key'):
+            if msg.get('content'):
+                msg['content'] = decrypt_message(msg['content'], msg['encryption_key'])
+        
+        # Remove encryption key from response
+        if 'encryption_key' in msg:
+            del msg['encryption_key']
+        
+        decrypted_messages.append(msg)
+    
+    # Mark messages as read
+    await db.messages.update_many(
+        {
+            "conversation_id": conversation_id,
+            "sender_id": {"$ne": current_user.id},
+            "is_read": False
+        },
+        {
+            "$set": {
+                "is_read": True,
+                "read_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    return {"messages": list(reversed(decrypted_messages))}
+
+@api_router.post("/messages/send")
+async def send_message(
+    message_data: MessageCreate,
+    current_user: User = Depends(get_current_user)
+):
+    """Send a message in a conversation"""
+    # Verify conversation exists and user is part of it
+    conversation = await db.conversations.find_one({"id": message_data.conversation_id})
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    
+    if current_user.id not in [conversation['creator_id'], conversation['fan_id']]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Check if conversation is blocked
+    if conversation.get('is_blocked'):
+        raise HTTPException(status_code=403, detail="Conversation is blocked")
+    
+    # Determine recipient
+    recipient_id = conversation['fan_id'] if current_user.id == conversation['creator_id'] else conversation['creator_id']
+    
+    # Check if can send message
+    can_send, reason = await can_send_message(current_user.id, recipient_id)
+    if not can_send:
+        raise HTTPException(status_code=403, detail=reason)
+    
+    # Determine sender type
+    sender_type = "creator" if current_user.id == conversation['creator_id'] else "fan"
+    
+    # Encrypt message if requested
+    content = message_data.content
+    encryption_key = None
+    is_encrypted = False
+    
+    if content and len(content) > 0:
+        # Always encrypt sensitive messages
+        content, encryption_key = encrypt_message(content)
+        is_encrypted = True
+    
+    # Set auto-destruct time if specified
+    auto_destruct_at = None
+    if message_data.auto_destruct_minutes:
+        auto_destruct_at = datetime.now(timezone.utc) + timedelta(minutes=message_data.auto_destruct_minutes)
+    
+    # Create message
+    message = Message(
+        conversation_id=message_data.conversation_id,
+        sender_id=current_user.id,
+        sender_type=sender_type,
+        message_type=message_data.message_type,
+        content=content,
+        is_ppv=message_data.is_ppv,
+        ppv_price=message_data.ppv_price,
+        ppv_preview=message_data.ppv_preview,
+        is_tip=message_data.is_tip,
+        tip_amount=message_data.tip_amount,
+        is_encrypted=is_encrypted,
+        encryption_key=encryption_key,
+        auto_destruct_at=auto_destruct_at
+    )
+    
+    await db.messages.insert_one(message.dict())
+    
+    # Update conversation last message time
+    await db.conversations.update_one(
+        {"id": message_data.conversation_id},
+        {"$set": {"last_message_at": datetime.now(timezone.utc)}}
+    )
+    
+    # Prepare message for real-time sending (without encryption key)
+    message_for_send = message.dict()
+    if message_for_send.get('encryption_key'):
+        del message_for_send['encryption_key']
+    
+    # Decrypt content for real-time sending
+    if is_encrypted and encryption_key:
+        message_for_send['content'] = decrypt_message(content, encryption_key)
+    
+    # Send real-time message
+    await manager.broadcast_to_conversation(
+        {
+            "type": "new_message",
+            "message": message_for_send
+        },
+        [conversation['creator_id'], conversation['fan_id']]
+    )
+    
+    return {"message": "Message sent successfully", "message_id": message.id}
+
+@api_router.post("/messages/upload")
+async def upload_message_file(
+    conversation_id: str = Form(...),
+    message_type: str = Form(...),
+    is_ppv: bool = Form(False),
+    ppv_price: Optional[float] = Form(None),
+    ppv_preview: Optional[str] = Form(None),
+    auto_destruct_minutes: Optional[int] = Form(None),
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    """Upload file and send as message"""
+    # Verify conversation
+    conversation = await db.conversations.find_one({"id": conversation_id})
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    
+    if current_user.id not in [conversation['creator_id'], conversation['fan_id']]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Validate file type
+    allowed_types = {
+        'image': ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+        'video': ['video/mp4', 'video/quicktime', 'video/x-msvideo'],
+        'audio': ['audio/mpeg', 'audio/wav', 'audio/ogg']
+    }
+    
+    if message_type not in allowed_types or file.content_type not in allowed_types[message_type]:
+        raise HTTPException(status_code=400, detail="Invalid file type for message type")
+    
+    # Read and validate file
+    file_content = await file.read()
+    if len(file_content) > 50 * 1024 * 1024:  # 50MB limit
+        raise HTTPException(status_code=400, detail="File too large (max 50MB)")
+    
+    # Store file in GridFS
+    file_id = await fs.upload_from_stream(
+        file.filename,
+        io.BytesIO(file_content),
+        metadata={
+            "content_type": file.content_type,
+            "message_type": message_type,
+            "uploaded_by": current_user.id,
+            "file_hash": generate_file_hash(file_content)
+        }
+    )
+    
+    # Determine sender type
+    sender_type = "creator" if current_user.id == conversation['creator_id'] else "fan"
+    
+    # Set auto-destruct time if specified
+    auto_destruct_at = None
+    if auto_destruct_minutes:
+        auto_destruct_at = datetime.now(timezone.utc) + timedelta(minutes=auto_destruct_minutes)
+    
+    # Create message
+    message = Message(
+        conversation_id=conversation_id,
+        sender_id=current_user.id,
+        sender_type=sender_type,
+        message_type=message_type,
+        file_path=str(file_id),
+        file_type=file.content_type,
+        file_size=len(file_content),
+        is_ppv=is_ppv,
+        ppv_price=ppv_price,
+        ppv_preview=ppv_preview,
+        auto_destruct_at=auto_destruct_at
+    )
+    
+    await db.messages.insert_one(message.dict())
+    
+    # Update conversation last message time
+    await db.conversations.update_one(
+        {"id": conversation_id},
+        {"$set": {"last_message_at": datetime.now(timezone.utc)}}
+    )
+    
+    # Send real-time message
+    await manager.broadcast_to_conversation(
+        {
+            "type": "new_message",
+            "message": message.dict()
+        },
+        [conversation['creator_id'], conversation['fan_id']]
+    )
+    
+    return {"message": "File uploaded and sent successfully", "message_id": message.id}
+
+@api_router.get("/messages/{message_id}/file")
+async def get_message_file(message_id: str, current_user: User = Depends(get_current_user)):
+    """Get file from message"""
+    message = await db.messages.find_one({"id": message_id})
+    if not message:
+        raise HTTPException(status_code=404, detail="Message not found")
+    
+    # Verify user is part of conversation
+    conversation = await db.conversations.find_one({"id": message['conversation_id']})
+    if current_user.id not in [conversation['creator_id'], conversation['fan_id']]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Check if message is PPV and user has paid
+    if message.get('is_ppv') and message['sender_id'] != current_user.id:
+        payment = await db.message_payments.find_one({
+            "message_id": message_id,
+            "payer_id": current_user.id,
+            "payment_status": "paid"
+        })
+        if not payment:
+            raise HTTPException(status_code=402, detail="Payment required to view this content")
+    
+    # Get file from GridFS
+    try:
+        file_id = ObjectId(message['file_path'])
+        grid_out = await fs.open_download_stream(file_id)
+        file_data = await grid_out.read()
+        
+        return StreamingResponse(
+            io.BytesIO(file_data),
+            media_type=message['file_type'],
+            headers={"Content-Disposition": f"inline; filename={grid_out.filename}"}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=404, detail="File not found")
+
+@api_router.post("/messages/{message_id}/pay")
+async def pay_for_message(
+    message_id: str,
+    request: Request,
+    current_user: User = Depends(get_current_user)
+):
+    """Pay for PPV message"""
+    message = await db.messages.find_one({"id": message_id})
+    if not message:
+        raise HTTPException(status_code=404, detail="Message not found")
+    
+    if not message.get('is_ppv'):
+        raise HTTPException(status_code=400, detail="Message is not pay-per-view")
+    
+    if message['sender_id'] == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot pay for your own message")
+    
+    # Check if already paid
+    existing_payment = await db.message_payments.find_one({
+        "message_id": message_id,
+        "payer_id": current_user.id,
+        "payment_status": "paid"
+    })
+    
+    if existing_payment:
+        raise HTTPException(status_code=400, detail="Already paid for this message")
+    
+    # Create Stripe checkout session
+    host_url = str(request.base_url).rstrip('/')
+    webhook_url = f"{host_url}/api/webhook/stripe"
+    stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
+    
+    success_url = f"{host_url}/messages/payment-success?session_id={{CHECKOUT_SESSION_ID}}"
+    cancel_url = f"{host_url}/messages/{message_id}"
+    
+    checkout_request = CheckoutSessionRequest(
+        amount=message['ppv_price'],
+        currency="usd",
+        success_url=success_url,
+        cancel_url=cancel_url,
+        metadata={
+            "type": "message_ppv",
+            "message_id": message_id,
+            "payer_id": current_user.id,
+            "creator_id": message['sender_id']
+        }
+    )
+    
+    session = await stripe_checkout.create_checkout_session(checkout_request)
+    
+    # Store payment record
+    payment = MessagePayment(
+        message_id=message_id,
+        payer_id=current_user.id,
+        amount=message['ppv_price'],
+        stripe_session_id=session.session_id
+    )
+    await db.message_payments.insert_one(payment.dict())
+    
+    # Store transaction record
+    transaction = PaymentTransaction(
+        user_id=current_user.id,
+        creator_id=message['sender_id'],
+        amount=message['ppv_price'],
+        transaction_type="message_ppv",
+        stripe_session_id=session.session_id,
+        metadata={
+            "message_id": message_id
+        }
+    )
+    await db.payment_transactions.insert_one(transaction.dict())
+    
+    return {"checkout_url": session.url, "session_id": session.session_id}
+
+# WebSocket endpoint
+@app.websocket("/ws/{user_id}")
+async def websocket_endpoint(websocket: WebSocket, user_id: str):
+    await manager.connect(websocket, user_id)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            # Handle incoming WebSocket messages if needed
+            message_data = json.loads(data)
+            
+            # Echo back for connection testing
+            await manager.send_personal_message({
+                "type": "pong",
+                "data": message_data
+            }, user_id)
+            
+    except WebSocketDisconnect:
+        manager.disconnect(user_id)
+
 # Dashboard Routes
 @api_router.get("/dashboard/creator/stats")
 async def get_creator_stats(current_user: User = Depends(get_current_user)):
