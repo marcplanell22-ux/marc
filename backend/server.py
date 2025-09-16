@@ -28,7 +28,8 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 fs = AsyncIOMotorGridFSBucket(db)
 
-# JWT Configuration
+# Configuration
+PLATFORM_COMMISSION_RATE = 0.099  # 9.9% commission rate
 JWT_SECRET = os.environ.get('JWT_SECRET', 'your-secret-key-here')
 JWT_ALGORITHM = 'HS256'
 
