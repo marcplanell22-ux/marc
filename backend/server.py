@@ -365,6 +365,19 @@ def generate_file_hash(file_content: bytes) -> str:
     """Generate SHA-256 hash of file content"""
     return hashlib.sha256(file_content).hexdigest()
 
+def serialize_doc(doc):
+    """Convert MongoDB document to JSON serializable format"""
+    if isinstance(doc, dict):
+        return {k: serialize_doc(v) for k, v in doc.items()}
+    elif isinstance(doc, list):
+        return [serialize_doc(item) for item in doc]
+    elif isinstance(doc, ObjectId):
+        return str(doc)
+    elif isinstance(doc, datetime):
+        return doc.isoformat()
+    else:
+        return doc
+
 async def can_send_message(sender_id: str, recipient_id: str) -> tuple[bool, str]:
     """Check if sender can send message to recipient"""
     # Check if conversation exists and is not blocked
