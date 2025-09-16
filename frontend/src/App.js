@@ -462,6 +462,7 @@ const ExplorePage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   const categories = [
     { value: 'all', label: 'Todos' },
@@ -529,10 +530,19 @@ const ExplorePage = () => {
     }
   };
 
-  const handleMessage = async (creatorId) => {
+  const handleMessage = async (creatorUserId) => {
+    if (!user) {
+      toast({
+        title: "Inicia sesión",
+        description: "Necesitas iniciar sesión para enviar mensajes",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       const response = await axios.post(`${API}/conversations`, {
-        recipient_id: creatorId
+        recipient_id: creatorUserId
       });
       
       // Redirect to messages with the conversation
