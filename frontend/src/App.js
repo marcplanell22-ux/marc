@@ -529,6 +529,23 @@ const ExplorePage = () => {
     }
   };
 
+  const handleMessage = async (creatorId) => {
+    try {
+      const response = await axios.post(`${API}/conversations`, {
+        recipient_id: creatorId
+      });
+      
+      // Redirect to messages with the conversation
+      window.location.href = `/messages?conversation=${response.data.conversation_id}`;
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Error al crear conversación",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
