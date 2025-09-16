@@ -696,6 +696,7 @@ function AppRoutes() {
       <Route path="/explore" element={<ExplorePage />} />
       <Route path="/dashboard" element={<Dashboard user={user} />} />
       <Route path="/schedule" element={<ContentScheduler user={user} />} />
+      <Route path="/messages" element={<MessagingSystem user={user} />} />
       <Route path="/subscription-success" element={
         <div className="max-w-2xl mx-auto py-16 px-4 text-center">
           <div className="bg-green-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-6">
