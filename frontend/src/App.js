@@ -242,7 +242,7 @@ const LandingPage = () => {
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
               {user ? (
                 <>
-                  <Button size="lg" className="text-lg px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700" onClick={() => window.location.href = '/explore'}>
+                  <Button size="lg" className="text-lg px-8 py-4 bg-gradient-to-r from-orange-500 via-red-500 to-yellow-500 hover:from-orange-600 hover:via-red-600 hover:to-yellow-600" onClick={() => window.location.href = '/explore'}>
                     🎯 Descubrir Creadores
                   </Button>
                   {user.is_creator && (
