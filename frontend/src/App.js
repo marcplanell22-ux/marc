@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import axios from 'axios';
 import './App.css';
 import Dashboard from './Dashboard';
+import ContentScheduler from './ContentScheduler';
 
 // Import Shadcn components
 import { Button } from './components/ui/button';
