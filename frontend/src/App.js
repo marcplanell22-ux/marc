@@ -219,16 +219,23 @@ const LandingPage = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h1 className="text-5xl md:text-7xl font-bold text-slate-900 mb-8 leading-tight">
-              {user ? `¡Bienvenido, ${user.full_name}!` : 'Conecta con tus'}
-              {!user && (
-                <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent"> Fans</span>
+              {user ? (
+                <>
+                  Monetiza Tu
+                  <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent"> Pasión</span>
+                </>
+              ) : (
+                <>
+                  Conecta con tus
+                  <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent"> Fans</span>
+                </>
               )}
             </h1>
             <p className="text-xl md:text-2xl text-slate-600 mb-12 max-w-3xl mx-auto leading-relaxed">
               {user 
-                ? `Explora contenido exclusivo, conecta con creadores y disfruta de la mejor plataforma de contenido.`
-                : `La plataforma definitiva para creadores de contenido. Monetiza tu pasión con comisiones competitivas, 
-                  pagos rápidos y herramientas avanzadas de analítica.`
+                ? `Descubre contenido exclusivo premium, conecta con tus creadores favoritos y disfruta de la mejor experiencia de suscripción sin límites.`
+                : `La plataforma definitiva para creadores de contenido. Monetiza tu pasión con comisiones competitivas al 9.9%, 
+                  pagos rápidos en 24h y herramientas avanzadas de analítica.`
               }
             </p>
             
