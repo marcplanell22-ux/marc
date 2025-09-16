@@ -295,6 +295,11 @@ const Dashboard = ({ user }) => {
           </Card>
         </TabsContent>
 
+        {/* Schedule Content Tab */}
+        <TabsContent value="schedule">
+          <ContentScheduler user={user} />
+        </TabsContent>
+
         {/* Analytics Tab */}
         <TabsContent value="analytics">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
