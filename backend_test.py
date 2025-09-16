@@ -279,12 +279,10 @@ class CreatorPlatformTester:
             self.log_test("Subscription Payment", False, "No user token or creator data available")
             return False
             
-        subscription_data = {
-            "creator_id": self.creator_data['id'],
-            "plan_type": "premium"
-        }
+        # The endpoint expects query parameters, not JSON body
+        endpoint = f'/payments/subscribe?creator_id={self.creator_data["id"]}&plan_type=premium'
         
-        success, response = self.make_request('POST', '/payments/subscribe', subscription_data, expected_status=200)
+        success, response = self.make_request('POST', endpoint, expected_status=200)
         
         if success and 'checkout_url' in response and 'session_id' in response:
             self.session_id = response['session_id']
