@@ -212,10 +212,6 @@ const Header = () => {
 const LandingPage = () => {
   const { user } = useAuth();
 
-  if (user) {
-    return <Navigate to="/explore" replace />;
-  }
-
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -223,19 +219,42 @@ const LandingPage = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h1 className="text-5xl md:text-7xl font-bold text-slate-900 mb-8 leading-tight">
-              Conecta con tus
-              <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent"> Fans</span>
+              {user ? `¡Bienvenido, ${user.full_name}!` : 'Conecta con tus'}
+              {!user && (
+                <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent"> Fans</span>
+              )}
             </h1>
             <p className="text-xl md:text-2xl text-slate-600 mb-12 max-w-3xl mx-auto leading-relaxed">
-              La plataforma definitiva para creadores de contenido. Monetiza tu pasión con comisiones competitivas, 
-              pagos rápidos y herramientas avanzadas de analítica.
+              {user 
+                ? `Explora contenido exclusivo, conecta con creadores y disfruta de la mejor plataforma de contenido.`
+                : `La plataforma definitiva para creadores de contenido. Monetiza tu pasión con comisiones competitivas, 
+                  pagos rápidos y herramientas avanzadas de analítica.`
+              }
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
-              <AuthModal mode="register" />
-              <Button variant="outline" size="lg" className="text-lg px-8 py-4">
-                Ver Demo
-              </Button>
+              {user ? (
+                <>
+                  <Button size="lg" className="text-lg px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700" onClick={() => window.location.href = '/explore'}>
+                    Explorar Creadores
+                  </Button>
+                  {user.is_creator && (
+                    <Button variant="outline" size="lg" className="text-lg px-8 py-4" onClick={() => window.location.href = '/dashboard'}>
+                      Mi Dashboard
+                    </Button>
+                  )}
+                  <Button variant="outline" size="lg" className="text-lg px-8 py-4" onClick={() => window.location.href = '/messages'}>
+                    Mis Mensajes
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <AuthModal mode="register" />
+                  <Button variant="outline" size="lg" className="text-lg px-8 py-4">
+                    Ver Demo
+                  </Button>
+                </>
+              )}
             </div>
 
             {/* Stats */}
