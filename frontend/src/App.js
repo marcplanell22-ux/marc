@@ -166,6 +166,9 @@ const Header = () => {
             <nav className="space-y-2">
               <a href="/" className="block px-4 py-2 text-slate-600 hover:text-slate-900">Explorar</a>
               <a href="/creators" className="block px-4 py-2 text-slate-600 hover:text-slate-900">Creadores</a>
+              {user && (
+                <a href="/messages" className="block px-4 py-2 text-slate-600 hover:text-slate-900">Mensajes</a>
+              )}
               {user?.is_creator && (
                 <>
                   <a href="/dashboard" className="block px-4 py-2 text-slate-600 hover:text-slate-900">Dashboard</a>
