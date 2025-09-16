@@ -222,8 +222,8 @@ const LandingPage = () => {
             {/* Stats */}
             <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto">
               <div className="text-center">
-                <div className="text-3xl font-bold text-slate-900">2.5%</div>
-                <div className="text-sm text-slate-600">Comisión Ultra Baja</div>
+                <div className="text-3xl font-bold text-slate-900">9.9%</div>
+                <div className="text-sm text-slate-600">Comisión Competitiva</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold text-slate-900">24h</div>
