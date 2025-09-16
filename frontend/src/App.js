@@ -167,8 +167,8 @@ const Header = () => {
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-slate-200 py-4">
             <nav className="space-y-2">
-              <a href="/" className="block px-4 py-2 text-slate-600 hover:text-slate-900">Explorar</a>
-              <a href="/creators" className="block px-4 py-2 text-slate-600 hover:text-slate-900">Creadores</a>
+              <a href="/" className="block px-4 py-2 text-slate-600 hover:text-slate-900">Inicio</a>
+              <a href="/explore" className="block px-4 py-2 text-slate-600 hover:text-slate-900">Explorar</a>
               {user && (
                 <a href="/messages" className="block px-4 py-2 text-slate-600 hover:text-slate-900">Mensajes</a>
               )}
