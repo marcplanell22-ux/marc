@@ -176,6 +176,7 @@ const Header = () => {
                 <>
                   <a href="/dashboard" className="block px-4 py-2 text-slate-600 hover:text-slate-900">Dashboard</a>
                   <a href="/schedule" className="block px-4 py-2 text-slate-600 hover:text-slate-900">Programar</a>
+                  <a href="/profile/edit" className="block px-4 py-2 text-slate-600 hover:text-slate-900">Mi Perfil</a>
                 </>
               )}
             </nav>
