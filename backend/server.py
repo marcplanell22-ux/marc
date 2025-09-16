@@ -193,11 +193,77 @@ class PaymentTransaction(BaseModel):
     creator_id: Optional[str] = None
     amount: float
     currency: str = "usd"
-    transaction_type: str  # 'subscription', 'tip', 'ppv'
+    transaction_type: str  # 'subscription', 'tip', 'ppv', 'message_ppv'
     stripe_session_id: str
     payment_status: str = "pending"
     metadata: Optional[Dict[str, Any]] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# Messaging Models
+class Conversation(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    creator_id: str
+    fan_id: str
+    is_blocked: bool = False
+    blocked_by: Optional[str] = None
+    last_message_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class Message(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    conversation_id: str
+    sender_id: str
+    sender_type: str  # 'creator' or 'fan'
+    message_type: str  # 'text', 'image', 'video', 'audio', 'tip'
+    content: Optional[str] = None
+    file_path: Optional[str] = None
+    file_type: Optional[str] = None
+    file_size: Optional[int] = None
+    is_ppv: bool = False
+    ppv_price: Optional[float] = None
+    ppv_preview: Optional[str] = None  # Preview text or thumbnail
+    is_tip: bool = False
+    tip_amount: Optional[float] = None
+    is_read: bool = False
+    is_encrypted: bool = False
+    encryption_key: Optional[str] = None
+    auto_destruct_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    read_at: Optional[datetime] = None
+
+class MessageCreate(BaseModel):
+    conversation_id: str
+    message_type: str = "text"
+    content: Optional[str] = None
+    is_ppv: bool = False
+    ppv_price: Optional[float] = None
+    ppv_preview: Optional[str] = None
+    is_tip: bool = False
+    tip_amount: Optional[float] = None
+    auto_destruct_minutes: Optional[int] = None
+
+class ConversationSettings(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    creator_id: str
+    allow_messages: bool = True
+    require_subscription: bool = False
+    message_price: Optional[float] = None  # Price per message for non-subscribers
+    auto_response_enabled: bool = False
+    auto_response_message: Optional[str] = None
+    max_messages_per_day: Optional[int] = None
+    blocked_users: List[str] = []
+    vip_users: List[str] = []
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class MessagePayment(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    message_id: str
+    payer_id: str
+    amount: float
+    payment_status: str = "pending"  # 'pending', 'paid', 'failed'
+    stripe_session_id: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    paid_at: Optional[datetime] = None
 
 class TipRequest(BaseModel):
     creator_id: str
