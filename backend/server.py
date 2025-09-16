@@ -319,6 +319,62 @@ def create_jwt_token(data: dict):
     encoded_jwt = jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
     return encoded_jwt
 
+def encrypt_message(content: str) -> tuple[str, str]:
+    """Encrypt message content and return encrypted content and key"""
+    fernet = Fernet(ENCRYPTION_KEY.encode() if isinstance(ENCRYPTION_KEY, str) else ENCRYPTION_KEY)
+    encrypted_content = fernet.encrypt(content.encode())
+    return base64.b64encode(encrypted_content).decode(), ENCRYPTION_KEY
+
+def decrypt_message(encrypted_content: str, key: str) -> str:
+    """Decrypt message content"""
+    try:
+        fernet = Fernet(key.encode() if isinstance(key, str) else key)
+        encrypted_bytes = base64.b64decode(encrypted_content.encode())
+        decrypted_content = fernet.decrypt(encrypted_bytes)
+        return decrypted_content.decode()
+    except:
+        return "[Message could not be decrypted]"
+
+def generate_file_hash(file_content: bytes) -> str:
+    """Generate SHA-256 hash of file content"""
+    return hashlib.sha256(file_content).hexdigest()
+
+async def can_send_message(sender_id: str, recipient_id: str) -> tuple[bool, str]:
+    """Check if sender can send message to recipient"""
+    # Check if conversation exists and is not blocked
+    conversation = await db.conversations.find_one({
+        "$or": [
+            {"creator_id": recipient_id, "fan_id": sender_id},
+            {"creator_id": sender_id, "fan_id": recipient_id}
+        ]
+    })
+    
+    if conversation and conversation.get('is_blocked'):
+        return False, "Conversation is blocked"
+    
+    # Check if recipient is a creator and has messaging restrictions
+    creator = await db.creators.find_one({"user_id": recipient_id})
+    if creator:
+        settings = await db.conversation_settings.find_one({"creator_id": creator['id']})
+        if settings:
+            if not settings.get('allow_messages', True):
+                return False, "Creator is not accepting messages"
+            
+            if sender_id in settings.get('blocked_users', []):
+                return False, "You are blocked by this creator"
+            
+            if settings.get('require_subscription', False):
+                # Check if sender is subscribed
+                subscription = await db.subscriptions.find_one({
+                    "user_id": sender_id,
+                    "creator_id": creator['id'],
+                    "status": "active"
+                })
+                if not subscription:
+                    return False, "Subscription required to send messages"
+    
+    return True, "OK"
+
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     try:
         payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
