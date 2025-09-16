@@ -44,7 +44,7 @@ STRIPE_API_KEY = os.environ.get('STRIPE_API_KEY')
 ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY', Fernet.generate_key().decode())
 
 # API Configuration
-API = os.environ.get('API_BASE_URL', 'http://localhost:8000/api')
+API = os.environ.get('API_BASE_URL', f'{os.environ.get("REACT_APP_BACKEND_URL", "http://localhost:8000")}/api')
 
 # WebSocket Connection Manager
 class ConnectionManager:
