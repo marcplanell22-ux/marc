@@ -333,77 +333,105 @@ const AuthModal = ({ mode = 'login' }) => {
           {mode === 'login' ? 'Iniciar Sesión' : 'Comenzar Gratis'}
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{isLogin ? 'Iniciar Sesión' : 'Crear Cuenta'}</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="sm:max-w-md max-w-lg mx-auto p-6 bg-white rounded-lg shadow-xl border-0">
+        <DialogHeader className="mb-6">
+          <DialogTitle className="text-xl font-semibold text-slate-900 mb-2">
+            {isLogin ? 'Iniciar Sesión' : 'Crear Cuenta'}
+          </DialogTitle>
+          <DialogDescription className="text-slate-600">
             {isLogin ? '¡Bienvenido de vuelta!' : 'Únete a miles de creadores exitosos'}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {!isLogin && (
             <>
-              <div>
-                <Label htmlFor="full_name">Nombre Completo</Label>
+              <div className="space-y-2">
+                <Label htmlFor="full_name" className="text-sm font-medium text-slate-700">
+                  Nombre Completo
+                </Label>
                 <Input
                   id="full_name"
+                  type="text"
+                  placeholder="Tu nombre completo"
+                  className="w-full h-10 px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   value={formData.full_name}
                   onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                   required
                 />
               </div>
-              <div>
-                <Label htmlFor="username">Nombre de Usuario</Label>
+              
+              <div className="space-y-2">
+                <Label htmlFor="username" className="text-sm font-medium text-slate-700">
+                  Nombre de Usuario
+                </Label>
                 <Input
                   id="username"
+                  type="text"
+                  placeholder="@tunombredeusuario"
+                  className="w-full h-10 px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                   required
                 />
               </div>
-              <div className="flex items-center space-x-2">
+              
+              <div className="flex items-center space-x-3 p-3 bg-slate-50 rounded-md">
                 <Switch
                   id="is_creator"
                   checked={formData.is_creator}
                   onCheckedChange={(checked) => setFormData({ ...formData, is_creator: checked })}
                 />
-                <Label htmlFor="is_creator">Soy un creador de contenido</Label>
+                <Label htmlFor="is_creator" className="text-sm font-medium text-slate-700 cursor-pointer">
+                  Soy un creador de contenido
+                </Label>
               </div>
             </>
           )}
           
-          <div>
-            <Label htmlFor="email">Email</Label>
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-sm font-medium text-slate-700">
+              Email
+            </Label>
             <Input
               id="email"
               type="email"
+              placeholder="tu@email.com"
+              className="w-full h-10 px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               required
             />
           </div>
           
-          <div>
-            <Label htmlFor="password">Contraseña</Label>
+          <div className="space-y-2">
+            <Label htmlFor="password" className="text-sm font-medium text-slate-700">
+              Contraseña
+            </Label>
             <Input
               id="password"
               type="password"
+              placeholder="••••••••"
+              className="w-full h-10 px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               required
             />
           </div>
 
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button 
+            type="submit" 
+            className="w-full h-11 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-medium rounded-md transition-all duration-200" 
+            disabled={loading}
+          >
             {loading ? 'Procesando...' : (isLogin ? 'Iniciar Sesión' : 'Crear Cuenta')}
           </Button>
         </form>
 
-        <div className="text-center">
+        <div className="text-center mt-6 pt-4 border-t border-slate-200">
           <button
             type="button"
-            className="text-sm text-indigo-600 hover:text-indigo-500"
+            className="text-sm text-indigo-600 hover:text-indigo-500 font-medium transition-colors"
             onClick={() => setIsLogin(!isLogin)}
           >
             {isLogin ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión'}
