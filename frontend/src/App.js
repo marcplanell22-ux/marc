@@ -6,6 +6,7 @@ import Dashboard from './Dashboard';
 import ContentScheduler from './ContentScheduler';
 import MessagingSystem from './MessagingSystem';
 import CreatorProfile from './CreatorProfile';
+import ProfileEditor from './ProfileEditor';
 
 // Import Shadcn components
 import { Button } from './components/ui/button';
