@@ -120,7 +120,17 @@ class Creator(BaseModel):
     rating: float = 0.0
     is_verified: bool = False
     banner_url: Optional[str] = None
+    avatar_url: Optional[str] = None
+    welcome_video_url: Optional[str] = None
+    welcome_message: Optional[str] = None
     social_links: Optional[Dict[str, str]] = None
+    custom_sections: Optional[List[Dict[str, Any]]] = None
+    subscription_tiers: Optional[List[Dict[str, Any]]] = None
+    profile_settings: Optional[Dict[str, Any]] = None
+    seo_title: Optional[str] = None
+    seo_description: Optional[str] = None
+    total_likes: int = 0
+    content_stats: Optional[Dict[str, int]] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class CreatorCreate(BaseModel):
@@ -129,6 +139,19 @@ class CreatorCreate(BaseModel):
     category: str
     tags: List[str] = []
     subscription_price: float
+
+class CreatorUpdate(BaseModel):
+    display_name: Optional[str] = None
+    bio: Optional[str] = None
+    category: Optional[str] = None
+    tags: Optional[List[str]] = None
+    subscription_price: Optional[float] = None
+    welcome_message: Optional[str] = None
+    social_links: Optional[Dict[str, str]] = None
+    custom_sections: Optional[List[Dict[str, Any]]] = None
+    subscription_tiers: Optional[List[Dict[str, Any]]] = None
+    seo_title: Optional[str] = None
+    seo_description: Optional[str] = None
 
 class Content(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
