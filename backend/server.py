@@ -745,8 +745,8 @@ async def get_creator_public_feed(
             preview['preview_text'] = f"Vista previa - PPV ${ppv_price}"
     
     return {
-        "public_content": [Content(**content) for content in public_content],
-        "premium_previews": [Content(**preview) for preview in premium_previews],
+        "public_content": [serialize_doc(content) for content in public_content],
+        "premium_previews": [serialize_doc(preview) for preview in premium_previews],
         "total_public": len(public_content),
         "has_premium": len(premium_previews) > 0
     }
