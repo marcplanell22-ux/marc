@@ -373,8 +373,8 @@ const AuthModal = ({ mode = 'login' }) => {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button size="lg" className="text-lg px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700">
-          {mode === 'login' ? 'Iniciar Sesión' : 'Comenzar Gratis'}
+        <Button size="lg" className="text-lg px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg transform hover:scale-105 transition-all duration-200">
+          {mode === 'login' ? '🚀 Iniciar Sesión' : '✨ Empezar Gratis Ahora'}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md max-w-lg mx-auto p-6 bg-white rounded-lg shadow-xl border-0">
