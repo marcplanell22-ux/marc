@@ -295,8 +295,8 @@ const LandingPage = () => {
           <div className="grid md:grid-cols-3 gap-8">
             <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
               <CardHeader>
-                <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-4">
-                  <DollarSign className="h-6 w-6 text-indigo-600" />
+                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mb-4">
+                  <DollarSign className="h-6 w-6 text-orange-600" />
                 </div>
                 <CardTitle>Monetización Flexible</CardTitle>
               </CardHeader>
@@ -307,8 +307,8 @@ const LandingPage = () => {
 
             <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
               <CardHeader>
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
-                  <TrendingUp className="h-6 w-6 text-purple-600" />
+                <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mb-4">
+                  <TrendingUp className="h-6 w-6 text-red-600" />
                 </div>
                 <CardTitle>Analíticas Avanzadas</CardTitle>
               </CardHeader>
@@ -319,8 +319,8 @@ const LandingPage = () => {
 
             <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
               <CardHeader>
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
-                  <Users className="h-6 w-6 text-green-600" />
+                <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center mb-4">
+                  <Users className="h-6 w-6 text-yellow-600" />
                 </div>
                 <CardTitle>Descubrimiento Inteligente</CardTitle>
               </CardHeader>
