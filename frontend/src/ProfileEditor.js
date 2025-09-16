@@ -127,7 +127,14 @@ const ProfileEditor = ({ user }) => {
         custom_sections: customSections
       };
 
-      await axios.put(`${API}/creators/${creator.id}`, updateData);
+      if (creator.id) {
+        // Update existing profile
+        await axios.put(`${API}/creators/${creator.id}`, updateData);
+      } else {
+        // Create new profile
+        const response = await axios.post(`${API}/creators`, updateData);
+        setCreator(prev => ({ ...prev, id: response.data.id }));
+      }
       
       toast({
         title: "¡Perfil actualizado!",
