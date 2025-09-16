@@ -181,8 +181,9 @@ const Dashboard = ({ user }) => {
 
       {/* Tabs Content */}
       <Tabs defaultValue="upload" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="upload">Subir Contenido</TabsTrigger>
+          <TabsTrigger value="schedule">Programar Contenido</TabsTrigger>
           <TabsTrigger value="analytics">Analíticas</TabsTrigger>
           <TabsTrigger value="earnings">Ganancias</TabsTrigger>
         </TabsList>
