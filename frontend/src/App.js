@@ -734,7 +734,7 @@ const ExplorePage = () => {
 
                 <div className="flex gap-2">
                   <Button 
-                    className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+                    className="flex-1 bg-gradient-to-r from-orange-500 via-red-500 to-yellow-500 hover:from-orange-600 hover:via-red-600 hover:to-yellow-600"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleSubscribe(creator.id);
