@@ -128,6 +128,7 @@ const Header = () => {
               <>
                 <a href="/dashboard" className="text-slate-600 hover:text-slate-900 transition-colors">Dashboard</a>
                 <a href="/schedule" className="text-slate-600 hover:text-slate-900 transition-colors">Programar</a>
+                <a href="/profile/edit" className="text-slate-600 hover:text-slate-900 transition-colors">Mi Perfil</a>
               </>
             )}
           </nav>
