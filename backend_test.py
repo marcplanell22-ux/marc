@@ -239,23 +239,42 @@ class CreatorPlatformTester:
         original_token = self.token
         self.token = self.creator_token
         
-        # Test text content creation
+        # Test text content creation using form data
         content_data = {
             "title": "My First Post",
             "description": "This is my first amazing post!",
-            "is_premium": False,
-            "is_ppv": False,
+            "is_premium": "false",
+            "is_ppv": "false",
             "tags": "lifestyle,motivation"
         }
         
-        success, response = self.make_request('POST', '/content', content_data, expected_status=200)
+        # Use form data instead of JSON for content creation
+        url = f"{self.api_url}/content"
+        headers = {'Authorization': f'Bearer {self.token}'}
         
-        if success and 'content_id' in response:
-            self.content_id = response['content_id']
-            self.log_test("Create Content", True)
-            result = True
-        else:
-            self.log_test("Create Content", False, str(response))
+        try:
+            response = requests.post(url, data=content_data, headers=headers)
+            success = response.status_code == 200
+            
+            if success:
+                response_data = response.json()
+                if 'content_id' in response_data:
+                    self.content_id = response_data['content_id']
+                    self.log_test("Create Content", True)
+                    result = True
+                else:
+                    self.log_test("Create Content", False, str(response_data))
+                    result = False
+            else:
+                try:
+                    error_data = response.json()
+                except:
+                    error_data = {"status_code": response.status_code, "text": response.text}
+                self.log_test("Create Content", False, str(error_data))
+                result = False
+                
+        except Exception as e:
+            self.log_test("Create Content", False, str(e))
             result = False
             
         # Restore original token
