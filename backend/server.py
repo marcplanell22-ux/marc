@@ -482,12 +482,261 @@ async def get_creators(skip: int = 0, limit: int = 20, category: Optional[str] =
     creators = await db.creators.find(filters).skip(skip).limit(limit).to_list(length=None)
     return [Creator(**creator) for creator in creators]
 
-@api_router.get("/creators/{creator_id}", response_model=Creator)
+@api_router.get("/creators/{creator_id}", response_model=Dict)
 async def get_creator(creator_id: str):
+    # Try to find by creator ID first
+    creator = await db.creators.find_one({"id": creator_id})
+    
+    # If not found, try to find by username (for SEO-friendly URLs)
+    if not creator:
+        user = await db.users.find_one({"username": creator_id})
+        if user and user['is_creator']:
+            creator = await db.creators.find_one({"user_id": user['id']})
+    
+    if not creator:
+        raise HTTPException(status_code=404, detail="Creator not found")
+    
+    # Get user info
+    user = await db.users.find_one({"id": creator['user_id']})
+    
+    # Get public content (free samples and previews)
+    public_content = await db.content.find({
+        "creator_id": creator['id'],
+        "is_premium": False,
+        "is_ppv": False
+    }).sort("created_at", -1).limit(10).to_list(length=None)
+    
+    # Get content statistics
+    content_stats = await db.content.aggregate([
+        {"$match": {"creator_id": creator['id']}},
+        {"$group": {
+            "_id": "$content_type",
+            "count": {"$sum": 1}
+        }}
+    ]).to_list(length=None)
+    
+    stats_dict = {stat['_id']: stat['count'] for stat in content_stats}
+    
+    # Get recent activity metrics
+    recent_content_count = await db.content.count_documents({
+        "creator_id": creator['id'],
+        "created_at": {"$gte": datetime.now(timezone.utc) - timedelta(days=30)}
+    })
+    
+    # Calculate total likes
+    total_likes = await db.content.aggregate([
+        {"$match": {"creator_id": creator['id']}},
+        {"$group": {"_id": None, "total_likes": {"$sum": "$likes"}}}
+    ]).to_list(1)
+    
+    total_likes_count = total_likes[0]['total_likes'] if total_likes else 0
+    
+    # Enhanced creator response
+    enhanced_creator = {
+        **creator,
+        "user_info": {
+            "username": user['username'],
+            "full_name": user['full_name'],
+            "avatar_url": user.get('avatar_url'),
+            "created_at": user['created_at']
+        },
+        "public_content": [Content(**content) for content in public_content],
+        "content_stats": stats_dict,
+        "recent_activity": {
+            "posts_this_month": recent_content_count,
+            "posting_frequency": "Regular" if recent_content_count > 4 else "Occasional"
+        },
+        "total_likes": total_likes_count,
+        "profile_completion": calculate_profile_completion(creator)
+    }
+    
+    return enhanced_creator
+
+def calculate_profile_completion(creator: dict) -> int:
+    """Calculate profile completion percentage"""
+    fields = [
+        creator.get('display_name'),
+        creator.get('bio'),
+        creator.get('banner_url'),
+        creator.get('avatar_url'),
+        creator.get('welcome_message'),
+        creator.get('social_links'),
+        creator.get('tags')
+    ]
+    
+    completed = sum(1 for field in fields if field)
+    return int((completed / len(fields)) * 100)
+
+@api_router.put("/creators/{creator_id}")
+async def update_creator_profile(
+    creator_id: str,
+    creator_data: CreatorUpdate,
+    current_user: User = Depends(get_current_user)
+):
+    """Update creator profile"""
+    creator = await db.creators.find_one({"id": creator_id, "user_id": current_user.id})
+    if not creator:
+        raise HTTPException(status_code=404, detail="Creator not found or access denied")
+    
+    update_data = {k: v for k, v in creator_data.dict().items() if v is not None}
+    
+    if update_data:
+        await db.creators.update_one(
+            {"id": creator_id},
+            {"$set": update_data}
+        )
+    
+    return {"message": "Profile updated successfully"}
+
+@api_router.post("/creators/{creator_id}/upload-banner")
+async def upload_creator_banner(
+    creator_id: str,
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    """Upload creator banner image"""
+    creator = await db.creators.find_one({"id": creator_id, "user_id": current_user.id})
+    if not creator:
+        raise HTTPException(status_code=404, detail="Creator not found or access denied")
+    
+    # Validate file type
+    if not file.content_type.startswith('image/'):
+        raise HTTPException(status_code=400, detail="Only image files are allowed")
+    
+    # Read and validate file size (max 5MB)
+    file_content = await file.read()
+    if len(file_content) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large (max 5MB)")
+    
+    # Store file in GridFS
+    file_id = await fs.upload_from_stream(
+        f"banner_{creator_id}_{file.filename}",
+        io.BytesIO(file_content),
+        metadata={
+            "content_type": file.content_type,
+            "creator_id": creator_id,
+            "type": "banner"
+        }
+    )
+    
+    # Update creator with banner URL
+    banner_url = f"{API}/creators/{creator_id}/banner/{file_id}"
+    await db.creators.update_one(
+        {"id": creator_id},
+        {"$set": {"banner_url": banner_url}}
+    )
+    
+    return {"message": "Banner uploaded successfully", "banner_url": banner_url}
+
+@api_router.get("/creators/{creator_id}/banner/{file_id}")
+async def get_creator_banner(creator_id: str, file_id: str):
+    """Get creator banner image"""
+    try:
+        grid_out = await fs.open_download_stream(ObjectId(file_id))
+        file_data = await grid_out.read()
+        
+        return StreamingResponse(
+            io.BytesIO(file_data),
+            media_type=grid_out.metadata.get('content_type', 'image/jpeg'),
+            headers={"Cache-Control": "max-age=86400"}  # Cache for 24 hours
+        )
+    except Exception:
+        raise HTTPException(status_code=404, detail="Banner not found")
+
+@api_router.post("/creators/{creator_id}/upload-welcome-video")
+async def upload_welcome_video(
+    creator_id: str,
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    """Upload creator welcome video"""
+    creator = await db.creators.find_one({"id": creator_id, "user_id": current_user.id})
+    if not creator:
+        raise HTTPException(status_code=404, detail="Creator not found or access denied")
+    
+    # Validate file type
+    if not file.content_type.startswith('video/'):
+        raise HTTPException(status_code=400, detail="Only video files are allowed")
+    
+    # Read and validate file size (max 50MB)
+    file_content = await file.read()
+    if len(file_content) > 50 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large (max 50MB)")
+    
+    # Store file in GridFS
+    file_id = await fs.upload_from_stream(
+        f"welcome_video_{creator_id}_{file.filename}",
+        io.BytesIO(file_content),
+        metadata={
+            "content_type": file.content_type,
+            "creator_id": creator_id,
+            "type": "welcome_video"
+        }
+    )
+    
+    # Update creator with video URL
+    video_url = f"{API}/creators/{creator_id}/welcome-video/{file_id}"
+    await db.creators.update_one(
+        {"id": creator_id},
+        {"$set": {"welcome_video_url": video_url}}
+    )
+    
+    return {"message": "Welcome video uploaded successfully", "video_url": video_url}
+
+@api_router.get("/creators/{creator_id}/welcome-video/{file_id}")
+async def get_welcome_video(creator_id: str, file_id: str):
+    """Get creator welcome video"""
+    try:
+        grid_out = await fs.open_download_stream(ObjectId(file_id))
+        file_data = await grid_out.read()
+        
+        return StreamingResponse(
+            io.BytesIO(file_data),
+            media_type=grid_out.metadata.get('content_type', 'video/mp4'),
+            headers={"Cache-Control": "max-age=3600"}  # Cache for 1 hour
+        )
+    except Exception:
+        raise HTTPException(status_code=404, detail="Welcome video not found")
+
+@api_router.get("/creators/{creator_id}/public-feed")
+async def get_creator_public_feed(
+    creator_id: str,
+    skip: int = 0,
+    limit: int = 20
+):
+    """Get creator's public feed with free samples"""
     creator = await db.creators.find_one({"id": creator_id})
     if not creator:
         raise HTTPException(status_code=404, detail="Creator not found")
-    return Creator(**creator)
+    
+    # Get public content
+    public_content = await db.content.find({
+        "creator_id": creator_id,
+        "is_premium": False,
+        "is_ppv": False
+    }).sort("created_at", -1).skip(skip).limit(limit).to_list(length=None)
+    
+    # Get premium content previews (with watermarks)
+    premium_previews = await db.content.find({
+        "creator_id": creator_id,
+        "$or": [{"is_premium": True}, {"is_ppv": True}]
+    }).sort("created_at", -1).limit(5).to_list(length=None)
+    
+    # Add watermark indicator to premium previews
+    for preview in premium_previews:
+        preview['is_preview'] = True
+        ppv_price = preview.get('ppv_price', 0)
+        if preview['is_premium']:
+            preview['preview_text'] = "Vista previa - Premium"
+        else:
+            preview['preview_text'] = f"Vista previa - PPV ${ppv_price}"
+    
+    return {
+        "public_content": [Content(**content) for content in public_content],
+        "premium_previews": [Content(**preview) for preview in premium_previews],
+        "total_public": len(public_content),
+        "has_premium": len(premium_previews) > 0
+    }
 
 # Content Routes
 @api_router.post("/content")
