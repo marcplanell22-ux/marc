@@ -119,8 +119,8 @@ const Header = () => {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
-            <a href="/" className="text-slate-600 hover:text-slate-900 transition-colors">Explorar</a>
-            <a href="/creators" className="text-slate-600 hover:text-slate-900 transition-colors">Creadores</a>
+            <a href="/" className="text-slate-600 hover:text-slate-900 transition-colors">Inicio</a>
+            <a href="/explore" className="text-slate-600 hover:text-slate-900 transition-colors">Explorar</a>
             {user && (
               <a href="/messages" className="text-slate-600 hover:text-slate-900 transition-colors">Mensajes</a>
             )}
