@@ -685,7 +685,7 @@ const ExplorePage = () => {
           {creators.map(creator => (
             <Card key={creator.id} className="overflow-hidden hover:shadow-xl transition-shadow duration-300 cursor-pointer group">
               <div 
-                className="relative h-48 bg-gradient-to-br from-indigo-500 to-purple-600"
+                className="relative h-48 bg-gradient-to-br from-orange-500 via-red-500 to-yellow-500"
                 onClick={() => window.location.href = `/creator/${creator.user_info?.username || creator.id}`}
               >
                 {creator.banner_url ? (
