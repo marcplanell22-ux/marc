@@ -118,7 +118,10 @@ const Header = () => {
             <a href="/" className="text-slate-600 hover:text-slate-900 transition-colors">Explorar</a>
             <a href="/creators" className="text-slate-600 hover:text-slate-900 transition-colors">Creadores</a>
             {user?.is_creator && (
-              <a href="/dashboard" className="text-slate-600 hover:text-slate-900 transition-colors">Dashboard</a>
+              <>
+                <a href="/dashboard" className="text-slate-600 hover:text-slate-900 transition-colors">Dashboard</a>
+                <a href="/schedule" className="text-slate-600 hover:text-slate-900 transition-colors">Programar</a>
+              </>
             )}
           </nav>
 
