@@ -40,6 +40,36 @@ JWT_ALGORITHM = 'HS256'
 # Stripe Configuration
 STRIPE_API_KEY = os.environ.get('STRIPE_API_KEY')
 
+# Encryption Configuration
+ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY', Fernet.generate_key().decode())
+
+# WebSocket Connection Manager
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: Dict[str, WebSocket] = {}
+    
+    async def connect(self, websocket: WebSocket, user_id: str):
+        await websocket.accept()
+        self.active_connections[user_id] = websocket
+    
+    def disconnect(self, user_id: str):
+        if user_id in self.active_connections:
+            del self.active_connections[user_id]
+    
+    async def send_personal_message(self, message: dict, user_id: str):
+        if user_id in self.active_connections:
+            try:
+                await self.active_connections[user_id].send_text(json.dumps(message))
+            except:
+                # Connection might be closed, remove it
+                self.disconnect(user_id)
+    
+    async def broadcast_to_conversation(self, message: dict, user_ids: List[str]):
+        for user_id in user_ids:
+            await self.send_personal_message(message, user_id)
+
+manager = ConnectionManager()
+
 # Create the main app
 app = FastAPI(title="Creator Subscription Platform", version="1.0.0")
 api_router = APIRouter(prefix="/api")
