@@ -480,7 +480,7 @@ async def create_creator_profile(creator_data: CreatorCreate, current_user: User
     
     return creator
 
-@api_router.get("/creators", response_model=List[Creator])
+@api_router.get("/creators", response_model=List[Dict])
 async def get_creators(skip: int = 0, limit: int = 20, category: Optional[str] = None, search: Optional[str] = None):
     filters = {}
     if category:
@@ -493,7 +493,24 @@ async def get_creators(skip: int = 0, limit: int = 20, category: Optional[str] =
         ]
         
     creators = await db.creators.find(filters).skip(skip).limit(limit).to_list(length=None)
-    return [Creator(**creator) for creator in creators]
+    
+    # Enrich creators with user info
+    enriched_creators = []
+    for creator in creators:
+        user = await db.users.find_one({"id": creator['user_id']})
+        if user:
+            enriched_creator = {
+                **serialize_doc(creator),
+                "user_info": {
+                    "username": user['username'],
+                    "full_name": user['full_name'],
+                    "avatar_url": user.get('avatar_url'),
+                    "created_at": user['created_at'].isoformat() if isinstance(user['created_at'], datetime) else user['created_at']
+                }
+            }
+            enriched_creators.append(enriched_creator)
+    
+    return enriched_creators
 
 @api_router.get("/creators/{creator_id}", response_model=Dict)
 async def get_creator(creator_id: str):
