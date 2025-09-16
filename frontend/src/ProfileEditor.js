@@ -63,6 +63,7 @@ const ProfileEditor = ({ user }) => {
 
   const fetchCreatorProfile = async () => {
     try {
+      // First try to get the creator profile
       const response = await axios.get(`${API}/creators/${user.username}`);
       setCreator(response.data);
       
@@ -80,7 +81,38 @@ const ProfileEditor = ({ user }) => {
       
       setCustomSections(response.data.custom_sections || []);
     } catch (error) {
-      console.error('Error fetching creator profile:', error);
+      // If creator profile doesn't exist, we need to create one first
+      if (error.response?.status === 404) {
+        console.log('Creator profile not found, user needs to complete setup');
+        setCreator({
+          id: null,
+          display_name: user.full_name,
+          bio: '',
+          category: '',
+          tags: [],
+          subscription_price: 9.99,
+          profile_completion: 20
+        });
+        
+        setProfileForm({
+          display_name: user.full_name || '',
+          bio: '',
+          category: '',
+          tags: [],
+          subscription_price: '9.99',
+          welcome_message: '',
+          social_links: {},
+          seo_title: '',
+          seo_description: ''
+        });
+      } else {
+        console.error('Error fetching creator profile:', error);
+        toast({
+          title: "Error",
+          description: "No se pudo cargar el perfil del creador",
+          variant: "destructive"
+        });
+      }
     }
   };
 
