@@ -22,7 +22,7 @@ import { toast } from './hooks/use-toast';
 import { Toaster } from './components/ui/toaster';
 
 // Icons
-import { Search, Heart, Play, DollarSign, Users, TrendingUp, Star, Camera, Video, Image, Music, Plus, LogOut, Settings, Menu, X, Gift } from 'lucide-react';
+import { Search, Heart, Play, DollarSign, Users, TrendingUp, Star, Camera, Video, Image, Music, Plus, LogOut, Settings, Menu, X, Gift, MessageCircle } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
