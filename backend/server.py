@@ -546,14 +546,14 @@ async def get_creator(creator_id: str):
     
     # Enhanced creator response
     enhanced_creator = {
-        **creator,
+        **serialize_doc(creator),
         "user_info": {
             "username": user['username'],
             "full_name": user['full_name'],
             "avatar_url": user.get('avatar_url'),
-            "created_at": user['created_at']
+            "created_at": user['created_at'].isoformat() if isinstance(user['created_at'], datetime) else user['created_at']
         },
-        "public_content": [Content(**content) for content in public_content],
+        "public_content": [serialize_doc(content) for content in public_content],
         "content_stats": stats_dict,
         "recent_activity": {
             "posts_this_month": recent_content_count,
