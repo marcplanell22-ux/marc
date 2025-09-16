@@ -610,10 +610,13 @@ const ExplorePage = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {creators.map(creator => (
-            <Card key={creator.id} className="overflow-hidden hover:shadow-xl transition-shadow duration-300">
-              <div className="relative h-48 bg-gradient-to-br from-indigo-500 to-purple-600">
+            <Card key={creator.id} className="overflow-hidden hover:shadow-xl transition-shadow duration-300 cursor-pointer group">
+              <div 
+                className="relative h-48 bg-gradient-to-br from-indigo-500 to-purple-600"
+                onClick={() => window.location.href = `/creator/${creator.user_info?.username || creator.id}`}
+              >
                 {creator.banner_url ? (
-                  <img src={creator.banner_url} alt={creator.display_name} className="w-full h-full object-cover" />
+                  <img src={creator.banner_url} alt={creator.display_name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <Camera className="h-12 w-12 text-white/50" />
@@ -640,8 +643,8 @@ const ExplorePage = () => {
               </div>
 
               <CardContent className="pt-8 p-6">
-                <div className="mb-4">
-                  <h3 className="font-bold text-lg text-slate-900 mb-1">{creator.display_name}</h3>
+                <div className="mb-4" onClick={() => window.location.href = `/creator/${creator.user_info?.username || creator.id}`}>
+                  <h3 className="font-bold text-lg text-slate-900 mb-1 group-hover:text-indigo-600 transition-colors">{creator.display_name}</h3>
                   <p className="text-slate-600 text-sm line-clamp-2">{creator.bio}</p>
                 </div>
 
@@ -659,7 +662,10 @@ const ExplorePage = () => {
                 <div className="flex gap-2">
                   <Button 
                     className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
-                    onClick={() => handleSubscribe(creator.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSubscribe(creator.id);
+                    }}
                   >
                     <Heart className="h-4 w-4 mr-1" />
                     Suscribirse
@@ -668,7 +674,10 @@ const ExplorePage = () => {
                     <Button 
                       variant="outline" 
                       size="sm"
-                      onClick={() => handleMessage(creator.user_id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMessage(creator.user_id);
+                      }}
                     >
                       <MessageCircle className="h-4 w-4" />
                     </Button>
@@ -676,7 +685,10 @@ const ExplorePage = () => {
                   <Button 
                     variant="outline" 
                     size="sm"
-                    onClick={() => handleTip(creator.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleTip(creator.id);
+                    }}
                   >
                     <Gift className="h-4 w-4" />
                   </Button>
