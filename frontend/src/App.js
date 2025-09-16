@@ -629,24 +629,51 @@ const ExplorePage = () => {
 
 // Main App Component
 function App() {
-  const { user } = useAuth();
-  
   return (
     <AuthProvider>
       <BrowserRouter>
         <div className="min-h-screen bg-slate-50">
           <Header />
           <main>
-            <Routes>
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/explore" element={<ExplorePage />} />
-              <Route path="/dashboard" element={<Dashboard user={user} />} />
-            </Routes>
+            <AppRoutes />
           </main>
           <Toaster />
         </div>
       </BrowserRouter>
     </AuthProvider>
+  );
+}
+
+// Routes Component
+function AppRoutes() {
+  const { user } = useAuth();
+
+  return (
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/explore" element={<ExplorePage />} />
+      <Route path="/dashboard" element={<Dashboard user={user} />} />
+      <Route path="/subscription-success" element={
+        <div className="max-w-2xl mx-auto py-16 px-4 text-center">
+          <div className="bg-green-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-6">
+            <Heart className="h-8 w-8 text-green-600" />
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900 mb-4">¡Suscripción Exitosa!</h1>
+          <p className="text-slate-600 mb-8">Ya puedes acceder a todo el contenido exclusivo.</p>
+          <Button onClick={() => window.location.href = '/explore'}>Continuar Explorando</Button>
+        </div>
+      } />
+      <Route path="/tip-success" element={
+        <div className="max-w-2xl mx-auto py-16 px-4 text-center">
+          <div className="bg-yellow-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-6">
+            <Gift className="h-8 w-8 text-yellow-600" />
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900 mb-4">¡Propina Enviada!</h1>
+          <p className="text-slate-600 mb-8">El creador ha recibido tu apoyo. ¡Gracias por contribuir!</p>
+          <Button onClick={() => window.location.href = '/explore'}>Continuar Explorando</Button>
+        </div>
+      } />
+    </Routes>
   );
 }
 
