@@ -146,6 +146,10 @@ class TipRequest(BaseModel):
     amount: float
     message: Optional[str] = None
 
+class SubscriptionRequest(BaseModel):
+    creator_id: str
+    plan_type: str
+
 # Utility Functions
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
