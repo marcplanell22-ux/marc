@@ -564,14 +564,15 @@ const ExplorePage = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900 mb-4">Explorar Creadores</h1>
+        <h1 className="text-3xl font-bold text-slate-900 mb-4">Descubre Creadores Increíbles</h1>
+        <p className="text-slate-600 mb-6">Encuentra contenido exclusivo de tus creadores favoritos y descubre nuevos talentos</p>
         
         {/* Search and Filters */}
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
             <Input
-              placeholder="Buscar creadores..."
+              placeholder="Buscar creadores por nombre, descripción o tags..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -591,6 +592,26 @@ const ExplorePage = () => {
             </SelectContent>
           </Select>
         </div>
+        
+        {/* Category Stats */}
+        <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="text-center p-3 bg-white rounded-lg border">
+            <div className="text-2xl font-bold text-indigo-600">{creators.length}</div>
+            <div className="text-sm text-slate-600">Creadores Activos</div>
+          </div>
+          <div className="text-center p-3 bg-white rounded-lg border">
+            <div className="text-2xl font-bold text-green-600">50+</div>
+            <div className="text-sm text-slate-600">Categorías</div>
+          </div>
+          <div className="text-center p-3 bg-white rounded-lg border">
+            <div className="text-2xl font-bold text-purple-600">1000+</div>
+            <div className="text-sm text-slate-600">Contenidos</div>
+          </div>
+          <div className="text-center p-3 bg-white rounded-lg border">
+            <div className="text-2xl font-bold text-yellow-600">9.9%</div>
+            <div className="text-sm text-slate-600">Comisión</div>
+          </div>
+        </div>
       </div>
 
       {/* Creators Grid */}
@@ -609,6 +630,29 @@ const ExplorePage = () => {
               </CardContent>
             </Card>
           ))}
+        </div>
+      ) : creators.length === 0 ? (
+        <div className="text-center py-12">
+          <Camera className="h-16 w-16 text-slate-400 mx-auto mb-6" />
+          <h3 className="text-xl font-medium text-slate-900 mb-2">
+            {searchTerm || selectedCategory !== 'all' 
+              ? 'No se encontraron creadores' 
+              : 'Sé el primer creador'
+            }
+          </h3>
+          <p className="text-slate-600 mb-6">
+            {searchTerm || selectedCategory !== 'all'
+              ? 'Intenta con otros términos de búsqueda o categorías diferentes.'
+              : 'Únete como creador y empieza a monetizar tu contenido.'
+            }
+          </p>
+          {!user ? (
+            <AuthModal mode="register" />
+          ) : !user.is_creator ? (
+            <Button onClick={() => window.location.href = '/profile/edit'}>
+              Convertirse en Creador
+            </Button>
+          ) : null}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
