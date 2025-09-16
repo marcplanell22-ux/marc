@@ -422,6 +422,340 @@ async def get_content_file(content_id: str, current_user: User = Depends(get_cur
     except Exception as e:
         raise HTTPException(status_code=404, detail="File not found")
 
+# Scheduled Content Routes
+@api_router.post("/content/schedule")
+async def schedule_content(
+    title: str = Form(...),
+    description: str = Form(...),
+    scheduled_date: str = Form(...),
+    is_premium: bool = Form(False),
+    is_ppv: bool = Form(False),
+    ppv_price: Optional[float] = Form(None),
+    tags: str = Form(""),
+    is_recurring: bool = Form(False),
+    recurrence_type: Optional[str] = Form(None),
+    recurrence_end_date: Optional[str] = Form(None),
+    file: Optional[UploadFile] = File(None),
+    current_user: User = Depends(get_current_user)
+):
+    # Get creator profile
+    creator = await db.creators.find_one({"user_id": current_user.id})
+    if not creator:
+        raise HTTPException(status_code=403, detail="User is not a creator")
+    
+    try:
+        scheduled_datetime = datetime.fromisoformat(scheduled_date.replace('Z', '+00:00'))
+        if scheduled_datetime <= datetime.now(timezone.utc):
+            raise HTTPException(status_code=400, detail="Scheduled date must be in the future")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format")
+    
+    file_path = None
+    content_type = "text"
+    
+    if file:
+        # Store file in GridFS
+        file_content = await file.read()
+        file_id = await fs.upload_from_stream(
+            file.filename,
+            io.BytesIO(file_content),
+            metadata={"content_type": file.content_type}
+        )
+        file_path = str(file_id)
+        
+        # Determine content type
+        if file.content_type.startswith("image"):
+            content_type = "image"
+        elif file.content_type.startswith("video"):
+            content_type = "video"
+        elif file.content_type.startswith("audio"):
+            content_type = "audio"
+    
+    # Parse recurrence end date if provided
+    recurrence_end_datetime = None
+    if recurrence_end_date:
+        try:
+            recurrence_end_datetime = datetime.fromisoformat(recurrence_end_date.replace('Z', '+00:00'))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid recurrence end date format")
+    
+    scheduled_content = ScheduledContent(
+        creator_id=creator['id'],
+        title=title,
+        description=description,
+        content_type=content_type,
+        file_path=file_path,
+        is_premium=is_premium,
+        is_ppv=is_ppv,
+        ppv_price=ppv_price,
+        tags=tags.split(",") if tags else [],
+        scheduled_date=scheduled_datetime,
+        is_recurring=is_recurring,
+        recurrence_type=recurrence_type,
+        recurrence_end_date=recurrence_end_datetime
+    )
+    
+    await db.scheduled_content.insert_one(scheduled_content.dict())
+    
+    return {"message": "Content scheduled successfully", "scheduled_content_id": scheduled_content.id}
+
+@api_router.get("/content/scheduled", response_model=List[ScheduledContent])
+async def get_scheduled_content(
+    skip: int = 0, 
+    limit: int = 50,
+    status: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    creator = await db.creators.find_one({"user_id": current_user.id})
+    if not creator:
+        raise HTTPException(status_code=403, detail="User is not a creator")
+    
+    filters = {"creator_id": creator['id']}
+    if status:
+        filters["status"] = status
+    
+    scheduled_content = await db.scheduled_content.find(filters).sort("scheduled_date", 1).skip(skip).limit(limit).to_list(length=None)
+    return [ScheduledContent(**item) for item in scheduled_content]
+
+@api_router.delete("/content/scheduled/{scheduled_id}")
+async def cancel_scheduled_content(scheduled_id: str, current_user: User = Depends(get_current_user)):
+    creator = await db.creators.find_one({"user_id": current_user.id})
+    if not creator:
+        raise HTTPException(status_code=403, detail="User is not a creator")
+    
+    scheduled_content = await db.scheduled_content.find_one({
+        "id": scheduled_id,
+        "creator_id": creator['id']
+    })
+    
+    if not scheduled_content:
+        raise HTTPException(status_code=404, detail="Scheduled content not found")
+    
+    if scheduled_content['status'] == 'published':
+        raise HTTPException(status_code=400, detail="Cannot cancel already published content")
+    
+    await db.scheduled_content.update_one(
+        {"id": scheduled_id},
+        {"$set": {"status": "cancelled"}}
+    )
+    
+    return {"message": "Scheduled content cancelled successfully"}
+
+@api_router.put("/content/scheduled/{scheduled_id}")
+async def update_scheduled_content(
+    scheduled_id: str,
+    title: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    scheduled_date: Optional[str] = Form(None),
+    is_premium: Optional[bool] = Form(None),
+    is_ppv: Optional[bool] = Form(None),
+    ppv_price: Optional[float] = Form(None),
+    tags: Optional[str] = Form(None),
+    current_user: User = Depends(get_current_user)
+):
+    creator = await db.creators.find_one({"user_id": current_user.id})
+    if not creator:
+        raise HTTPException(status_code=403, detail="User is not a creator")
+    
+    scheduled_content = await db.scheduled_content.find_one({
+        "id": scheduled_id,
+        "creator_id": creator['id'],
+        "status": "scheduled"
+    })
+    
+    if not scheduled_content:
+        raise HTTPException(status_code=404, detail="Scheduled content not found or already published")
+    
+    update_data = {}
+    
+    if title is not None:
+        update_data["title"] = title
+    if description is not None:
+        update_data["description"] = description
+    if scheduled_date is not None:
+        try:
+            scheduled_datetime = datetime.fromisoformat(scheduled_date.replace('Z', '+00:00'))
+            if scheduled_datetime <= datetime.now(timezone.utc):
+                raise HTTPException(status_code=400, detail="Scheduled date must be in the future")
+            update_data["scheduled_date"] = scheduled_datetime
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date format")
+    if is_premium is not None:
+        update_data["is_premium"] = is_premium
+    if is_ppv is not None:
+        update_data["is_ppv"] = is_ppv
+    if ppv_price is not None:
+        update_data["ppv_price"] = ppv_price
+    if tags is not None:
+        update_data["tags"] = tags.split(",") if tags else []
+    
+    if update_data:
+        await db.scheduled_content.update_one(
+            {"id": scheduled_id},
+            {"$set": update_data}
+        )
+    
+    return {"message": "Scheduled content updated successfully"}
+
+# Content Templates Routes
+@api_router.post("/content/templates", response_model=ContentTemplate)
+async def create_content_template(template_data: ContentTemplateCreate, current_user: User = Depends(get_current_user)):
+    creator = await db.creators.find_one({"user_id": current_user.id})
+    if not creator:
+        raise HTTPException(status_code=403, detail="User is not a creator")
+    
+    template = ContentTemplate(**template_data.dict(), creator_id=creator['id'])
+    await db.content_templates.insert_one(template.dict())
+    
+    return template
+
+@api_router.get("/content/templates", response_model=List[ContentTemplate])
+async def get_content_templates(current_user: User = Depends(get_current_user)):
+    creator = await db.creators.find_one({"user_id": current_user.id})
+    if not creator:
+        raise HTTPException(status_code=403, detail="User is not a creator")
+    
+    templates = await db.content_templates.find({"creator_id": creator['id']}).to_list(length=None)
+    return [ContentTemplate(**template) for template in templates]
+
+@api_router.delete("/content/templates/{template_id}")
+async def delete_content_template(template_id: str, current_user: User = Depends(get_current_user)):
+    creator = await db.creators.find_one({"user_id": current_user.id})
+    if not creator:
+        raise HTTPException(status_code=403, detail="User is not a creator")
+    
+    result = await db.content_templates.delete_one({
+        "id": template_id,
+        "creator_id": creator['id']
+    })
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Template not found")
+    
+    return {"message": "Template deleted successfully"}
+
+# Auto-publish scheduled content (this would be called by a cron job)
+@api_router.post("/content/publish-scheduled")
+async def publish_scheduled_content():
+    """
+    This endpoint should be called periodically by a cron job to publish scheduled content
+    """
+    current_time = datetime.now(timezone.utc)
+    
+    # Find content that should be published now
+    scheduled_content = await db.scheduled_content.find({
+        "scheduled_date": {"$lte": current_time},
+        "status": "scheduled"
+    }).to_list(length=None)
+    
+    published_count = 0
+    
+    for content_data in scheduled_content:
+        try:
+            # Create the actual content
+            content = Content(
+                creator_id=content_data['creator_id'],
+                title=content_data['title'],
+                description=content_data['description'],
+                content_type=content_data['content_type'],
+                file_path=content_data.get('file_path'),
+                thumbnail_url=content_data.get('thumbnail_url'),
+                is_premium=content_data['is_premium'],
+                is_ppv=content_data['is_ppv'],
+                ppv_price=content_data.get('ppv_price'),
+                tags=content_data['tags']
+            )
+            
+            await db.content.insert_one(content.dict())
+            
+            # Update scheduled content status
+            await db.scheduled_content.update_one(
+                {"id": content_data['id']},
+                {
+                    "$set": {
+                        "status": "published",
+                        "published_at": current_time
+                    }
+                }
+            )
+            
+            # Update creator content count
+            await db.creators.update_one(
+                {"id": content_data['creator_id']},
+                {"$inc": {"content_count": 1}}
+            )
+            
+            # Handle recurring content
+            if content_data.get('is_recurring') and content_data.get('recurrence_type'):
+                next_date = calculate_next_recurrence_date(
+                    content_data['scheduled_date'], 
+                    content_data['recurrence_type']
+                )
+                
+                # Check if we should create next occurrence
+                if (not content_data.get('recurrence_end_date') or 
+                    next_date <= content_data['recurrence_end_date']):
+                    
+                    next_scheduled = ScheduledContent(
+                        creator_id=content_data['creator_id'],
+                        title=content_data['title'],
+                        description=content_data['description'],
+                        content_type=content_data['content_type'],
+                        file_path=content_data.get('file_path'),
+                        is_premium=content_data['is_premium'],
+                        is_ppv=content_data['is_ppv'],
+                        ppv_price=content_data.get('ppv_price'),
+                        tags=content_data['tags'],
+                        scheduled_date=next_date,
+                        is_recurring=True,
+                        recurrence_type=content_data['recurrence_type'],
+                        recurrence_end_date=content_data.get('recurrence_end_date')
+                    )
+                    
+                    await db.scheduled_content.insert_one(next_scheduled.dict())
+            
+            published_count += 1
+            
+        except Exception as e:
+            logging.error(f"Error publishing scheduled content {content_data['id']}: {str(e)}")
+            # Mark as failed
+            await db.scheduled_content.update_one(
+                {"id": content_data['id']},
+                {"$set": {"status": "failed"}}
+            )
+    
+    return {"message": f"Published {published_count} scheduled content items"}
+
+def calculate_next_recurrence_date(current_date: datetime, recurrence_type: str) -> datetime:
+    """Calculate the next occurrence date based on recurrence type"""
+    if isinstance(current_date, str):
+        current_date = datetime.fromisoformat(current_date.replace('Z', '+00:00'))
+    
+    if recurrence_type == 'daily':
+        return current_date + timedelta(days=1)
+    elif recurrence_type == 'weekly':
+        return current_date + timedelta(weeks=1)
+    elif recurrence_type == 'monthly':
+        # Add one month (approximate)
+        if current_date.month == 12:
+            return current_date.replace(year=current_date.year + 1, month=1)
+        else:
+            try:
+                return current_date.replace(month=current_date.month + 1)
+            except ValueError:
+                # Handle case where day doesn't exist in next month (e.g., Jan 31 -> Feb 28)
+                import calendar
+                next_month = current_date.month + 1 if current_date.month < 12 else 1
+                next_year = current_date.year if current_date.month < 12 else current_date.year + 1
+                max_day = calendar.monthrange(next_year, next_month)[1]
+                return current_date.replace(
+                    year=next_year,
+                    month=next_month,
+                    day=min(current_date.day, max_day)
+                )
+    else:
+        return current_date + timedelta(days=1)  # Default to daily
+
 # Payment Routes
 @api_router.post("/payments/subscribe")
 async def create_subscription_checkout(
